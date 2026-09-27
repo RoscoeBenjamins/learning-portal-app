@@ -1,0 +1,15 @@
+node_modules
+.next
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+# Generated course content is NEVER committed (lecture-derived material)
+content/*
+!content/README.md
+!content/example/
+.vercel
+supabase/config.toml
+supabase/.temp
+package-lock.json

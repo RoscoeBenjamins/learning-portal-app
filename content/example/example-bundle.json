@@ -1,0 +1,29 @@
+{
+  "topics": [
+    {
+      "id": "example-t01-what-is-a-dbms",
+      "course_code": "CICS 501",
+      "position": 1,
+      "title": "EXAMPLE: What is a DBMS?",
+      "summary": "Sample topic used for local testing. Not published by the scheduled task.",
+      "content_md": "## Why this matters\nEvery MoMo transfer you make is a database transaction. If the system crashed halfway, money could vanish, and a DBMS is what stops that.\n\n> **Database Management System (DBMS):** software that stores, organises and protects data, and lets many users read and change it safely at the same time.\n\n```mermaid\nflowchart LR\n  A[Mobile app] --> B[DBMS]\n  C[Agent POS] --> B\n  B --> D[(Accounts table)]\n  B --> E[(Transactions table)]\n```\n\n| Spreadsheet | DBMS |\n|---|---|\n| One user edits at a time | Thousands at once |\n| No enforced rules | Constraints and types |\n\n## Summary\n- A DBMS sits between applications and data.",
+      "audio_script": "Let's talk about what a database management system actually is.\n\nThink about sending money on MoMo. Your balance goes down, the other person's goes up, and both changes must happen together or not at all.\n\nThree things to remember. A DBMS stores data, protects it, and lets many people use it at once.",
+      "key_terms": [{ "term": "DBMS", "meaning": "Software that manages a database and controls access to it." }],
+      "source_files": [],
+      "flashcards": [
+        { "front": "What does DBMS stand for?", "back": "Database Management System" },
+        { "front": "Name one advantage of a DBMS over a spreadsheet", "back": "Safe concurrent access by many users" }
+      ],
+      "questions": [
+        {
+          "id": "example-t01-q01",
+          "question": "Which feature lets thousands of MoMo users update balances at the same time without corrupting data?",
+          "options": ["Cell formatting", "Concurrency control", "Charts", "File compression"],
+          "answer_index": 1,
+          "explanation": "Concurrency control coordinates simultaneous transactions. Compression saves space but does nothing to stop two updates colliding.",
+          "difficulty": "easy"
+        }
+      ]
+    }
+  ]
+}

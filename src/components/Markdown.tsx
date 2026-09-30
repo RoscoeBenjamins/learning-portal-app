@@ -23,9 +23,12 @@ function Mermaid({ code }: { code: string }) {
   return <div className="my-4 flex justify-center overflow-x-auto" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
+export const slugify = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const text = (n: any): string => typeof n === "string" ? n : Array.isArray(n) ? n.map(text).join("") : n?.props ? text(n.props.children) : "";
+
 export function Markdown({ children }: { children: string }) {
   return (
-    <div className="prose prose-slate max-w-none dark:prose-invert prose-headings:scroll-mt-20 prose-table:text-sm prose-quoteless">
+    <div className="prose prose-slate max-w-none prose-headings:tracking-tight prose-h2:mt-12 prose-h2:text-[24px] prose-a:text-brand-600 dark:prose-a:text-[#2997FF] prose-img:rounded-xl dark:prose-invert prose-headings:scroll-mt-20 prose-table:text-sm prose-quoteless">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -40,8 +43,9 @@ export function Markdown({ children }: { children: string }) {
             if ((child as any)?.props?.className?.includes("language-mermaid")) return <>{children}</>;
             return <pre>{children}</pre>;
           },
+          h2({ children }) { return <h2 id={slugify(text(children))}>{children}</h2>; },
           blockquote({ children }) {
-            return <blockquote className="rounded-r-lg border-l-4 border-brand-500 bg-brand-50 py-1 not-italic dark:bg-brand-900/30">{children}</blockquote>;
+            return <blockquote className="rounded-xl border-l-0 bg-brand-500/[.07] px-5 py-1 not-italic dark:bg-brand-500/15">{children}</blockquote>;
           },
         }}
       >

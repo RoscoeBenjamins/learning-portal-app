@@ -22,9 +22,9 @@ body { background:var(--bg); @apply text-ink antialiased dark:text-[#F5F5F7]; fo
 .eyebrow { @apply text-[13px] font-semibold uppercase tracking-[.06em] text-ink-2 dark:text-[#A1A1A6]; }
 .pill { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold; }
 .tone-good { @apply bg-[#34C759]/15 text-[#1B7A34] dark:text-[#30D158]; }
-.tone-ok { @apply bg-brand-500/12 text-brand-700 dark:text-[#2997FF]; }
+.tone-ok { @apply bg-brand-500/[.12] text-brand-700 dark:text-[#2997FF]; }
 .tone-warn { @apply bg-[#FF9500]/15 text-[#9A5700] dark:text-[#FF9F0A]; }
-.tone-bad { @apply bg-[#FF3B30]/12 text-[#C4221A] dark:text-[#FF453A]; }
+.tone-bad { @apply bg-[#FF3B30]/[.12] text-[#C4221A] dark:text-[#FF453A]; }
 .glass { background:var(--bar); @apply backdrop-blur-xl backdrop-saturate-150; }
 .prose pre { @apply overflow-x-auto rounded-xl; }
 .prose { @apply text-[17px] leading-[1.6]; }

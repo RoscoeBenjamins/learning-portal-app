@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { track } from "@/lib/track";
 import { supabase } from "@/lib/supabase-browser";
 
 const I = (d: string) => (
@@ -21,8 +22,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const bare = ["/login", "/signup", "/mfa", "/auth"].some((p) => path.startsWith(p));
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => { if (!bare) track("page_view", path); }, [path, bare]);
+  useEffect(() => { if (!bare) supabase().rpc("is_admin").then(({ data }) => setAdmin(!!data), () => {}); }, [bare]);
   if (bare) return <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-10">{children}</main>;
-  const signOut = async () => { await supabase().auth.signOut(); router.replace("/login"); router.refresh(); };
+  const signOut = async () => { track("sign_out", path); await supabase().auth.signOut(); router.replace("/login"); router.refresh(); };
   const isActive = (href: string) => (href === "/" ? path === "/" || path.startsWith("/courses") : path.startsWith(href));
   return (
     <>
@@ -30,7 +34,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-12 max-w-5xl items-center gap-1 px-4">
           <Link href="/" className="mr-3 flex items-center gap-2 text-[17px] font-semibold tracking-tight">
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-[#0071E3] to-[#5856D6] text-[13px] font-bold text-white" aria-hidden>L</span>
-            Learning Portal
+            <span className="hidden sm:inline">Learning Portal</span>
           </Link>
           <nav className="hidden items-center gap-0.5 md:flex" aria-label="Main">
             {NAV.map((n) => (
@@ -40,7 +44,11 @@ export function Shell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <button onClick={signOut} className="ml-auto min-h-[44px] rounded-full px-3 text-[14px] text-brand-600 dark:text-[#2997FF]">Sign out</button>
+          <div className="ml-auto flex items-center">
+            {admin && <Link href="/admin" className={`min-h-[44px] content-center rounded-full px-3 text-[14px] ${path.startsWith("/admin") ? "font-semibold" : "muted"}`}>Admin</Link>}
+            <Link href="/feedback" className={`min-h-[44px] content-center rounded-full px-3 text-[14px] ${path.startsWith("/feedback") ? "font-semibold" : "muted"}`}>Feedback</Link>
+          </div>
+          <button onClick={signOut} className=" min-h-[44px] rounded-full px-3 text-[14px] text-brand-600 dark:text-[#2997FF]">Sign out</button>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 pb-28 pt-8 md:pb-16 md:pt-10">{children}</main>

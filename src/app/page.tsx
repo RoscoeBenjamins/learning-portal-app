@@ -38,7 +38,7 @@ export default function Home() {
               <span className="absolute inset-x-0 top-0 h-1" style={{ background: color }} aria-hidden />
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[13px] font-semibold tracking-wide" style={{ color }}>{c.code}</div>
+                  <div className="muted flex items-center gap-1.5 text-[13px] font-semibold tracking-wide"><span className="h-2 w-2 rounded-full" style={{ background: color }} aria-hidden />{c.code}</div>
                   <div className="mt-1 text-[19px] font-semibold leading-snug tracking-tight">{c.title}</div>
                 </div>
                 {!c.is_project && <Ring pct={pct} color={color} />}

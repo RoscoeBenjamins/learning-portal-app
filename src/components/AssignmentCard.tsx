@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Assignment, DraftFeedback } from "@/lib/types";
 import { Markdown } from "@/components/Markdown";
+import { DraftCoach } from "@/components/DraftCoach";
 
 function due(d: string | null) {
   if (!d) return null;
@@ -18,7 +19,8 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
     { id: "brief", label: "Brief", show: !!a.brief_md },
     { id: "breakdown", label: "Breakdown", show: true },
     { id: "model", label: "Model answer", show: !!a.model_answer_md },
-    { id: "feedback", label: `Feedback${feedback.length ? ` (${feedback.length})` : ""}`, show: true },
+    { id: "draft", label: "My draft", show: true },
+    { id: "feedback", label: `Drive drafts (${feedback.length})`, show: feedback.length > 0 },
   ].filter((t) => t.show);
   const [tab, setTab] = useState(a.brief_md ? "brief" : "breakdown");
   const d = due(a.due_date);
@@ -55,6 +57,7 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
               <Markdown>{a.model_answer_md}</Markdown>
             </>
           )}
+          {tab === "draft" && <DraftCoach assignmentId={a.id} sections={a.coach_sections ?? []} />}
           {tab === "feedback" && (feedback.length ? feedback.map((f) => (
             <div key={f.id} className="mb-8 last:mb-0">
               <h3 className="text-[17px] font-semibold">“{f.draft_name}”</h3>

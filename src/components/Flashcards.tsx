@@ -22,17 +22,22 @@ export function Flashcards({ cards }: { cards: Flashcard[] }) {
         <span>Card {i + 1} of {cards.length}</span>
         <span>{knownCount} marked as known</span>
       </div>
-      <button
-        onClick={() => setFlipped((f) => !f)}
-        className="flex min-h-[160px] w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center transition hover:border-brand-500 dark:border-slate-700 dark:bg-slate-800/50"
-        aria-label="Flip card"
-      >
-        <div>
-          <div className="muted mb-2 text-xs uppercase tracking-wide">{flipped ? "Answer" : "Question"}</div>
-          <div className="text-lg">{flipped ? card.back : card.front}</div>
-          {!flipped && <div className="muted mt-3 text-xs">Tap to reveal</div>}
+      <button onClick={() => setFlipped((f) => !f)} className="flip block w-full text-left" aria-label={flipped ? "Show question" : "Reveal answer"}>
+        <div className={`flip-inner relative grid min-h-[220px] ${flipped ? "is-flipped" : ""}`}>
+          <div className="flip-face card col-start-1 row-start-1 flex flex-col justify-center p-8 text-center">
+            <div className="eyebrow mb-3">Question</div>
+            <div className="text-[20px] font-semibold leading-snug tracking-tight">{card.front}</div>
+            <div className="muted mt-4 text-[13px]">Tap to reveal</div>
+          </div>
+          <div className="flip-face flip-back card col-start-1 row-start-1 flex flex-col justify-center p-8 text-center">
+            <div className="eyebrow mb-3">Answer</div>
+            <div className="text-[17px] leading-relaxed">{card.back}</div>
+          </div>
         </div>
       </button>
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-black/[.06] dark:bg-white/10" aria-hidden>
+        <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${((i + 1) / cards.length) * 100}%` }} />
+      </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <button className="btn-ghost" disabled={i === 0} onClick={() => { setI(i - 1); setFlipped(false); }}>Previous</button>
         {flipped ? (

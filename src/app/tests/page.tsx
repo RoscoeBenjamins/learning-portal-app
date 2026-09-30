@@ -25,7 +25,7 @@ export default function Tests() {
           const n = data.qs.filter((x) => x.topics.course_code === c.code).length;
           const last = data.attempts.find((a) => a.course_code === c.code);
           return (
-            <Link key={c.code} href={`/tests/${slugCode(c.code)}`} className="card block transition hover:border-brand-500">
+            <Link key={c.code} href={`/tests/${slugCode(c.code)}`} className="card-link">
               <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">{c.code}</div>
               <div className="mt-1 font-semibold">{c.title}</div>
               <div className="muted mt-2 text-sm">{n ? `${n} questions available` : "No questions yet"}</div>

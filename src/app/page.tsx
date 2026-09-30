@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase-browser";
 import { q, useData } from "@/lib/useData";
 import { getCourses } from "@/lib/courses";
 import { slugCode, type Attempt } from "@/lib/types";
+import { courseColor } from "@/lib/courseColors";
 import { ErrorBox, Loading, PageHeader } from "@/components/ui";
 
 export default function Home() {
@@ -19,38 +20,55 @@ export default function Home() {
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? "No data"} />;
 
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   return (
     <div>
-      <PageHeader title="Your courses" subtitle="MSc-MPhil IT · Semester 2 (2nd cohort, January)" />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="eyebrow">{today}</div>
+      <PageHeader title="Your courses" subtitle="MSc-MPhil IT · Semester 2" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.courses.map((c) => {
           const topics = data.topics.filter((t) => t.course_code === c.code);
           const checked = new Set(data.attempts.filter((a) => a.course_code === c.code && a.topic_id).map((a) => a.topic_id));
           const pct = topics.length ? Math.round((checked.size / topics.length) * 100) : 0;
           const asg = data.assignments.filter((a) => a.course_code === c.code).length;
           const href = c.is_project ? "/dissertation" : `/courses/${slugCode(c.code)}`;
+          const color = courseColor(c.code);
           return (
-            <Link key={c.code} href={href} className="card block transition hover:border-brand-500">
-              <div className="text-xs font-semibold uppercase tracking-wide text-brand-600">{c.code}</div>
-              <div className="mt-1 text-lg font-semibold">{c.title}</div>
-              <div className="muted mt-1 text-sm">{c.lecturer}{c.schedule ? ` · ${c.schedule}` : ""}{c.venue ? ` · ${c.venue}` : ""}</div>
-              {c.is_project ? (
-                <div className="muted mt-4 text-sm">Dissertation and project guides →</div>
-              ) : (
-                <>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div className="h-full bg-brand-500" style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="muted mt-2 flex justify-between text-xs">
-                    <span>{topics.length ? `${checked.size}/${topics.length} topics checked` : "No materials yet"}</span>
-                    <span>{asg} assignment{asg === 1 ? "" : "s"}</span>
-                  </div>
-                </>
-              )}
+            <Link key={c.code} href={href} className="card-link relative flex flex-col overflow-hidden">
+              <span className="absolute inset-x-0 top-0 h-1" style={{ background: color }} aria-hidden />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-semibold tracking-wide" style={{ color }}>{c.code}</div>
+                  <div className="mt-1 text-[19px] font-semibold leading-snug tracking-tight">{c.title}</div>
+                </div>
+                {!c.is_project && <Ring pct={pct} color={color} />}
+              </div>
+              <div className="muted mt-2 text-[13px]">{[c.lecturer, c.schedule, c.venue].filter(Boolean).join(" · ")}</div>
+              <div className="mt-auto flex gap-2 pt-5 text-[13px]">
+                {c.is_project ? <span className="muted">Dissertation guides ›</span> : (
+                  <>
+                    <span className="rounded-full bg-black/[.05] px-2.5 py-1 dark:bg-white/10">{topics.length ? `${checked.size} of ${topics.length} topics` : "No materials yet"}</span>
+                    {asg > 0 && <span className="rounded-full bg-black/[.05] px-2.5 py-1 dark:bg-white/10">{asg} assignment{asg === 1 ? "" : "s"}</span>}
+                  </>
+                )}
+              </div>
             </Link>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function Ring({ pct, color }: { pct: number; color: string }) {
+  const r = 20, c = 2 * Math.PI * r;
+  return (
+    <div className="relative h-12 w-12 shrink-0" role="img" aria-label={`${pct}% of topics checked`}>
+      <svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90">
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="5" className="stroke-black/[.07] dark:stroke-white/[.12]" />
+        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="5" stroke={color} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} className="transition-[stroke-dashoffset] duration-700" />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-[11px] font-semibold tabular-nums">{pct}%</span>
     </div>
   );
 }

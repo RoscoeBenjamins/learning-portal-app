@@ -22,7 +22,7 @@ export default function CoursePage({ params }: { params: { slug: string } }) {
         <ol className="space-y-3">
           {topics.map((t) => (
             <li key={t.id}>
-              <Link href={`/courses/${params.slug}/book/${encodeURIComponent(t.id)}`} className="card flex gap-4 transition hover:border-brand-500">
+              <Link href={`/courses/${params.slug}/book/${encodeURIComponent(t.id)}`} className="card-link flex gap-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-100">{t.position}</span>
                 <span>
                   <span className="block font-medium">{t.title}</span>

@@ -5,8 +5,11 @@ export default {
   darkMode: "media",
   theme: {
     extend: {
+      fontFamily: { sans: ["-apple-system", "BlinkMacSystemFont", "\"SF Pro Text\"", "\"Segoe UI\"", "Roboto", "\"Helvetica Neue\"", "Arial", "sans-serif"] },
+      borderRadius: { "2xl": "18px", "3xl": "24px" },
       colors: {
-        brand: { 50: "#eef6ff", 100: "#d9eaff", 500: "#2f6fdd", 600: "#2458b8", 700: "#1d4690", 900: "#13294f" },
+        brand: { 50: "#EAF3FE", 100: "#D6E8FD", 500: "#0071E3", 600: "#0066CC", 700: "#0058B0", 900: "#0B2A4F" },
+        ink: { DEFAULT: "#1D1D1F", 2: "#6E6E73" },
       },
     },
   },

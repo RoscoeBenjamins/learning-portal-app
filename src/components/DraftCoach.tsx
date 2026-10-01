@@ -8,7 +8,15 @@ import type { CoachSection } from "@/lib/types";
 type Draft = { id: number; sections: Record<string, string>; feedback_status: "none" | "requested" | "ready"; requested_at: string | null; feedback_md: string | null; feedback_at: string | null };
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
-export function DraftCoach({ assignmentId, sections }: { assignmentId: string; sections: CoachSection[] }) {
+/** Scale each section's target so the targets add up to the assignment's word limit. */
+function scaleTargets(sections: CoachSection[], limit: number | null | undefined): CoachSection[] {
+  const base = sections.reduce((n, s) => n + (s.words || 0), 0);
+  if (!limit || !base) return sections;
+  return sections.map((s) => ({ ...s, words: s.words ? Math.max(10, Math.round((s.words * limit) / base / 10) * 10) : 0 }));
+}
+
+export function DraftCoach({ assignmentId, sections: rawSections, wordLimit }: { assignmentId: string; sections: CoachSection[]; wordLimit?: number | null }) {
+  const sections = scaleTargets(rawSections, wordLimit);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [text, setText] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -49,7 +57,7 @@ export function DraftCoach({ assignmentId, sections }: { assignmentId: string; s
   if (!loaded) return <p className="muted py-6 text-[15px]">Loading your draft…</p>;
   if (!sections.length) return <p className="muted py-6 text-center text-[15px]">Writing prompts for this assignment will appear after the next portal update.</p>;
   const total = sections.reduce((n, s) => n + words(text[s.key] ?? ""), 0);
-  const target = sections.reduce((n, s) => n + (s.words || 0), 0);
+  const target = wordLimit || sections.reduce((n, s) => n + (s.words || 0), 0);
   const status = draft?.feedback_status ?? "none";
 
   return (
@@ -89,7 +97,7 @@ export function DraftCoach({ assignmentId, sections }: { assignmentId: string; s
           {status === "requested" ? "Feedback requested" : status === "ready" ? "Get feedback on this version" : "Get feedback"}
         </button>
         <button className="btn-ghost" onClick={download}>Download</button>
-        <span className="muted text-[13px] tabular-nums">{total}{target ? ` / ~${target}` : ""} words · {saved === "saving" ? "Saving…" : saved === "error" ? "Couldn't save — check your connection" : "Saved"}</span>
+        <span className="muted text-[13px] tabular-nums">{total}{target ? ` / ${wordLimit ? "" : "~"}${target.toLocaleString("en-GB")}` : ""} words{wordLimit && total > wordLimit * 1.1 ? " (over the limit)" : ""} · {saved === "saving" ? "Saving…" : saved === "error" ? "Couldn't save — check your connection" : "Saved"}</span>
         {status === "requested" && <span className="muted w-full text-[13px]">Feedback arrives after the next update (around 05:54 or 18:54, Accra time). You can keep editing, but the feedback will be on the version saved when it runs.</span>}
       </div>
     </div>

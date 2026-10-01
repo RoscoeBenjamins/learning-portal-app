@@ -1,11 +1,11 @@
--- AI drafts written by DeepSeek and Perplexity (applied 2026-10-01). Safe to re-run.
+-- AI drafts written by a free OpenRouter model, DeepSeek or Perplexity (applied 2026-10-01). Safe to re-run.
 -- One row per user, assignment and provider. Written by the ai-draft Edge Function
 -- (with the caller's own JWT, so RLS applies); only admins can generate.
 create table if not exists public.ai_drafts (
   id bigserial primary key,
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   assignment_id text not null references public.assignments(id) on delete cascade,
-  provider text not null check (provider in ('deepseek','perplexity')),
+  provider text not null check (provider in ('deepseek','perplexity','openrouter')),
   sections jsonb not null default '{}'::jsonb,
   sources jsonb not null default '[]'::jsonb,
   model text,

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase-browser";
 import type { Assignment, DraftFeedback } from "@/lib/types";
 import { Markdown } from "@/components/Markdown";
 import { DraftCoach } from "@/components/DraftCoach";
+import { AiDrafts } from "@/components/AiDrafts";
 
 function due(d: string | null) {
   if (!d) return null;
@@ -15,12 +16,25 @@ function due(d: string | null) {
   return { text: `Due ${date} · ${days} day${days === 1 ? "" : "s"} left`, tone: days <= 7 ? "tone-warn" : "tone-ok" };
 }
 
+function useIsAdmin() {
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    supabase().auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      supabase().from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle().then(({ data: row }) => setAdmin(!!row));
+    });
+  }, []);
+  return admin;
+}
+
 export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignment; feedback: DraftFeedback[]; slug: string; topicTitle: (id: string) => string }) {
+  const admin = useIsAdmin();
   const tabs = [
     { id: "brief", label: "Brief", show: !!a.brief_md },
     { id: "breakdown", label: "Breakdown", show: true },
     { id: "model", label: "Model answer", show: !!a.model_answer_md },
     { id: "draft", label: "My draft", show: true },
+    { id: "ai", label: "AI drafts", show: admin },
     { id: "feedback", label: `Drive drafts (${feedback.length})`, show: feedback.length > 0 },
   ].filter((t) => t.show);
   const [tab, setTab] = useState(a.brief_md ? "brief" : "breakdown");
@@ -32,7 +46,7 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
       <header className="border-b border-[var(--line)] p-5 sm:p-6">
         {d && <span className={`pill ${d.tone}`}>{d.text}</span>}
         <h2 className="mt-2 text-[22px] font-bold leading-tight tracking-tight">{a.title}</h2>
-        <WordLimit assignmentId={a.id} value={limit} onSaved={setLimit} />
+        <WordLimit assignmentId={a.id} value={limit} onSaved={setLimit} admin={admin} />
         {a.related_topics.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="muted">Revise first:</span>
@@ -60,6 +74,7 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
               <Markdown>{a.model_answer_md}</Markdown>
             </>
           )}
+          {tab === "ai" && admin && <AiDrafts assignmentId={a.id} sections={a.coach_sections ?? []} wordLimit={limit} />}
           {tab === "draft" && <DraftCoach assignmentId={a.id} sections={a.coach_sections ?? []} wordLimit={limit} />}
           {tab === "feedback" && (feedback.length ? feedback.map((f) => (
             <div key={f.id} className="mb-8 last:mb-0">
@@ -80,18 +95,10 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
 }
 
 /** Shows the assignment's word limit; admins can set or change it. */
-function WordLimit({ assignmentId, value, onSaved }: { assignmentId: string; value: number | null; onSaved: (n: number | null) => void }) {
-  const [admin, setAdmin] = useState(false);
+function WordLimit({ assignmentId, value, onSaved, admin }: { assignmentId: string; value: number | null; onSaved: (n: number | null) => void; admin: boolean }) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState(value ? String(value) : "");
   const [state, setState] = useState<"idle" | "saving" | "error">("idle");
-
-  useEffect(() => {
-    supabase().auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-      supabase().from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle().then(({ data: row }) => setAdmin(!!row));
-    });
-  }, []);
 
   const save = async () => {
     const n = input.trim() === "" ? null : Math.round(Number(input.replace(/[, ]/g, "")));

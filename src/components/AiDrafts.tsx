@@ -6,15 +6,15 @@ import { Markdown } from "@/components/Markdown";
 import { scaleTargets } from "@/components/DraftCoach";
 import type { CoachSection } from "@/lib/types";
 
-type Provider = "deepseek" | "perplexity";
+type Provider = "openrouter" | "perplexity";
 type Source = { url: string; title?: string; date?: string };
 type Row = { provider: Provider; sections: Record<string, string>; sources: Source[]; model: string | null; updated_at: string };
-const NAMES: Record<Provider, string> = { deepseek: "DeepSeek", perplexity: "Perplexity" };
+const NAMES: Record<Provider, string> = { openrouter: "Free model", perplexity: "Perplexity" };
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 export function AiDrafts({ assignmentId, sections: raw, wordLimit }: { assignmentId: string; sections: CoachSection[]; wordLimit: number | null }) {
   const sections = scaleTargets(raw, wordLimit);
-  const [provider, setProvider] = useState<Provider>("deepseek");
+  const [provider, setProvider] = useState<Provider>("openrouter");
   const [rows, setRows] = useState<Partial<Record<Provider, Row>>>({});
   const [busy, setBusy] = useState<{ provider: Provider; key: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function AiDrafts({ assignmentId, sections: raw, wordLimit }: { assignmen
   useEffect(() => {
     supabase().from("ai_drafts").select("provider,sections,sources,model,updated_at").eq("assignment_id", assignmentId).then(({ data }) => {
       const next: Partial<Record<Provider, Row>> = {};
-      for (const r of (data ?? []) as Row[]) next[r.provider] = r;
+      for (const r of (data ?? []) as Row[]) if (r.provider in NAMES) next[r.provider] = r;
       setRows(next);
     });
   }, [assignmentId]);
@@ -83,7 +83,7 @@ export function AiDrafts({ assignmentId, sections: raw, wordLimit }: { assignmen
   return (
     <div>
       <div className="mb-6 rounded-xl bg-[#FF9500]/10 p-4 text-[14px] leading-snug">
-        <b>AI-written drafts.</b> These are written by DeepSeek or Perplexity from your brief. Check your lecturer&apos;s rules on AI use before submitting anything based on them, check every fact, and open every reference to make sure it exists and says what the draft claims.
+        <b>AI-written drafts.</b> These are written from your brief by a free AI model (through OpenRouter) or by Perplexity. Check your lecturer&apos;s rules on AI use before submitting anything based on them, check every fact, and open every reference to make sure it exists and says what the draft claims.
       </div>
 
       <div role="tablist" className="mb-5 inline-flex gap-1 rounded-full bg-black/[.05] p-1 dark:bg-white/10">
@@ -104,7 +104,8 @@ export function AiDrafts({ assignmentId, sections: raw, wordLimit }: { assignmen
         {filled > 0 && <button className="btn-ghost" disabled={running} onClick={download}>Download</button>}
         {filled > 0 && <span className="muted text-[13px] tabular-nums">{total.toLocaleString("en-GB")} / {target.toLocaleString("en-GB")} words</span>}
       </div>
-      {running && <p className="muted -mt-3 mb-6 text-[13px]">Each section takes about 20–60 seconds. Keep this page open until it finishes.</p>}
+      {running && <p className="muted -mt-3 mb-6 text-[13px]">Each section takes about 20–60 seconds{provider === "openrouter" ? " (free models can be slower)" : ""}. Keep this page open until it finishes.</p>}
+      {provider === "openrouter" && !running && <p className="muted -mt-3 mb-6 text-[13px]">Free models are limited to about 50 requests a day, roughly 8 full drafts. Each section uses one request.</p>}
       {error && <div className="mb-6 rounded-xl bg-[#FF3B30]/10 p-4 text-[14px]">{error}</div>}
 
       {!filled && !running ? (

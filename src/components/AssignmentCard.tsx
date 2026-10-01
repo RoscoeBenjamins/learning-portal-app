@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase-browser";
 import type { Assignment, DraftFeedback } from "@/lib/types";
 import { Markdown } from "@/components/Markdown";
 import { DraftCoach } from "@/components/DraftCoach";
@@ -24,12 +25,14 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
   ].filter((t) => t.show);
   const [tab, setTab] = useState(a.brief_md ? "brief" : "breakdown");
   const d = due(a.due_date);
+  const [limit, setLimit] = useState<number | null>(a.word_limit ?? null);
 
   return (
     <article className="card p-0">
       <header className="border-b border-[var(--line)] p-5 sm:p-6">
         {d && <span className={`pill ${d.tone}`}>{d.text}</span>}
         <h2 className="mt-2 text-[22px] font-bold leading-tight tracking-tight">{a.title}</h2>
+        <WordLimit assignmentId={a.id} value={limit} onSaved={setLimit} />
         {a.related_topics.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="muted">Revise first:</span>
@@ -57,7 +60,7 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
               <Markdown>{a.model_answer_md}</Markdown>
             </>
           )}
-          {tab === "draft" && <DraftCoach assignmentId={a.id} sections={a.coach_sections ?? []} />}
+          {tab === "draft" && <DraftCoach assignmentId={a.id} sections={a.coach_sections ?? []} wordLimit={limit} />}
           {tab === "feedback" && (feedback.length ? feedback.map((f) => (
             <div key={f.id} className="mb-8 last:mb-0">
               <h3 className="text-[17px] font-semibold">“{f.draft_name}”</h3>
@@ -73,5 +76,48 @@ export function AssignmentCard({ a, feedback, slug, topicTitle }: { a: Assignmen
         </div>
       </div>
     </article>
+  );
+}
+
+/** Shows the assignment's word limit; admins can set or change it. */
+function WordLimit({ assignmentId, value, onSaved }: { assignmentId: string; value: number | null; onSaved: (n: number | null) => void }) {
+  const [admin, setAdmin] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState(value ? String(value) : "");
+  const [state, setState] = useState<"idle" | "saving" | "error">("idle");
+
+  useEffect(() => {
+    supabase().auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      supabase().from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle().then(({ data: row }) => setAdmin(!!row));
+    });
+  }, []);
+
+  const save = async () => {
+    const n = input.trim() === "" ? null : Math.round(Number(input.replace(/[, ]/g, "")));
+    if (n !== null && (!Number.isFinite(n) || n < 50 || n > 50000)) return setState("error");
+    setState("saving");
+    const { error } = await supabase().from("assignments").update({ word_limit: n }).eq("id", assignmentId);
+    if (error) return setState("error");
+    onSaved(n); setEditing(false); setState("idle");
+  };
+
+  if (editing) return (
+    <form className="mt-3 flex flex-wrap items-center gap-2 text-[14px]" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <label htmlFor={`wl-${assignmentId}`} className="muted">Word limit</label>
+      <input id={`wl-${assignmentId}`} inputMode="numeric" autoFocus className="input h-9 w-28 py-0 tabular-nums" placeholder="e.g. 3000"
+        value={input} onChange={(e) => { setInput(e.target.value); setState("idle"); }} />
+      <button className="btn h-9 min-h-0 px-4" disabled={state === "saving"}>{state === "saving" ? "Saving…" : "Save"}</button>
+      <button type="button" className="btn-ghost h-9 min-h-0 px-3" onClick={() => { setEditing(false); setInput(value ? String(value) : ""); setState("idle"); }}>Cancel</button>
+      {state === "error" && <span className="w-full text-[13px] text-[#FF3B30]">Enter a number between 50 and 50,000, or leave it blank to clear it.</span>}
+    </form>
+  );
+
+  if (!value && !admin) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-[14px]">
+      {value ? <span className="pill bg-black/[.05] text-[13px] dark:bg-white/10">Word limit: {value.toLocaleString("en-GB")} words</span> : <span className="muted">No word limit set</span>}
+      {admin && <button className="text-[14px] font-medium text-brand-700 hover:underline dark:text-[#2997FF]" onClick={() => setEditing(true)}>{value ? "Change" : "Add word limit"}</button>}
+    </div>
   );
 }

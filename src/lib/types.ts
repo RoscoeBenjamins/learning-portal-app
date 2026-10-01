@@ -14,7 +14,7 @@ export type Question = {
 };
 export type Assignment = {
   id: string; course_code: string; title: string; due_date: string | null; brief_md: string;
-  breakdown_md: string; model_answer_md: string | null; coach_sections: CoachSection[]; related_topics: string[]; updated_at: string;
+  breakdown_md: string; model_answer_md: string | null; coach_sections: CoachSection[]; related_topics: string[]; word_limit: number | null; updated_at: string;
 };
 export type CoachSection = { key: string; title: string; words: number; prompts: string[] };
 export type DraftFeedback = { id: number; assignment_id: string; draft_name: string; feedback_md: string; created_at: string };

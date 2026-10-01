@@ -41,6 +41,7 @@ Generated content is **never committed**: bundles are written to `content/` (git
   5. A worked **parallel** example on a *different* scenario
   6. A list of sources to consult
 - **Never write the answer to the actual assignment questions**, even in part.
+- **Word limit:** `assignments.word_limit` is set by the student in the portal (the Assignment card's "Add word limit" link). If it is set, use it instead of guessing: size the breakdown's suggested structure and the `coach_sections` word targets so they add up to it, and judge draft length against it. Never overwrite `word_limit` when upserting an assignment (leave it out of the upsert). If it is empty and the brief gives no limit, say so and assume a sensible length as before.
 
 **Student draft (`Assignment/` file named `MY DRAFT - …`)**
 - Match it to its assignment and add `draft_feedback`:

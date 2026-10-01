@@ -9,7 +9,7 @@ type Draft = { id: number; sections: Record<string, string>; feedback_status: "n
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 /** Scale each section's target so the targets add up to the assignment's word limit. */
-function scaleTargets(sections: CoachSection[], limit: number | null | undefined): CoachSection[] {
+export function scaleTargets(sections: CoachSection[], limit: number | null | undefined): CoachSection[] {
   const base = sections.reduce((n, s) => n + (s.words || 0), 0);
   if (!limit || !base) return sections;
   return sections.map((s) => ({ ...s, words: s.words ? Math.max(10, Math.round((s.words * limit) / base / 10) * 10) : 0 }));

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Course book · GCTU SGSR Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="nav.js"></script>
+</head>
+<body>
+<main id="main">
+  <h1>Course book</h1>
+  <p class="muted" id="sub"></p>
+  <div id="content"></div>
+</main>
+<script>
+(function () {
+  var P = window.Portal, D = window.PORTAL;
+  function render() {
+    var fac = P.getFaculty();
+    document.getElementById("sub").textContent = P.facultyName(fac);
+    var list = D.courses.filter(function (c) { return !c.faculty || c.faculty === fac; });
+    if (!list.length) {
+      document.getElementById("content").innerHTML = '<div class="empty"><p><strong>No course outlines yet.</strong></p><p>Upload a course outline to generate the week-by-week breakdown.</p></div>';
+      return;
+    }
+    // Week-by-week rendering is added when the first outline is uploaded.
+  }
+  render();
+  document.addEventListener("facultychange", render);
+})();
+</script>
+</body>
+</html>

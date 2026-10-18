@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Assignments · GCTU SGSR Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="nav.js"></script>
+</head>
+<body>
+<main id="main">
+  <h1>Assignments</h1>
+  <p class="muted" id="sub"></p>
+  <div id="content"></div>
+</main>
+<script>
+(function () {
+  var P = window.Portal, D = window.PORTAL;
+  function render() {
+    var fac = P.getFaculty();
+    document.getElementById("sub").textContent = P.facultyName(fac);
+    var list = D.assignments.filter(function (a) { return !a.faculty || a.faculty === fac; });
+    if (!list.length) {
+      document.getElementById("content").innerHTML = '<div class="empty"><p><strong>No assignments yet.</strong></p><p>Upload an assignment brief and it will appear here with its due date.</p></div>';
+      return;
+    }
+    // Index table is added when the first brief is uploaded.
+  }
+  render();
+  document.addEventListener("facultychange", render);
+})();
+</script>
+</body>
+</html>

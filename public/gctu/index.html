@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>GCTU SGSR Student Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="nav.js"></script>
+</head>
+<body>
+<main id="main">
+  <p class="kicker" id="year"></p>
+  <h1>Postgraduate Student Portal</h1>
+  <p class="muted">Weekend lectures run Friday–Sunday. Pick your faculty at the top: every page follows it.</p>
+
+  <section aria-labelledby="wk-h" class="stack">
+    <h2 id="wk-h" class="sr-only">This weekend</h2>
+    <div id="this-weekend" class="card feature" aria-live="polite"></div>
+  </section>
+
+  <h2>Sections</h2>
+  <div class="grid">
+    <a class="card link-card" href="delivery.html"><h3>Delivery mode</h3><p class="muted small">Virtual or face-to-face, weekend by weekend, for every faculty.</p></a>
+    <a class="card link-card" href="schedule.html"><h3>Schedule</h3><p class="muted small">Your weekends with calendar downloads and reminders.</p></a>
+    <a class="card link-card" href="coursebook.html"><h3>Course book</h3><p class="muted small">Week-by-week breakdown from your course outlines.</p></a>
+    <a class="card link-card" href="assignments.html"><h3>Assignments</h3><p class="muted small">Briefs, due dates and calendar reminders.</p></a>
+  </div>
+</main>
+<script>
+(function () {
+  var P = window.Portal, D = window.PORTAL;
+  document.getElementById("year").textContent = "GCTU SGSR · " + D.academicYear + " · " + D.semester;
+
+  function timesText(fac) {
+    var tt = (D.timetable || {})[fac] || [];
+    if (tt.length) return P.esc(tt.map(function (s) { return (s.day === "sat" ? "Sat " : s.day === "sun" ? "Sun " : "Fri ") + (s.start ? s.start + "–" + s.end : "TBC") + " " + s.code; }).join(" · "));
+    var t = D.lectureTimes[fac] || {};
+    var parts = ["fri", "sat", "sun"].filter(function (k) { return (t[k] || {}).start; }).map(function (k) { return k[0].toUpperCase() + k.slice(1) + " " + t[k].start + "–" + (t[k].end || "?"); });
+    return parts.length ? P.esc(parts.join(", ")) : P.confirmTag();
+  }
+  function render() {
+    var fac = P.getFaculty(), box = document.getElementById("this-weekend");
+    var br = P.currentBreak();
+    if (br) {
+      box.innerHTML = '<p class="kicker">Right now</p><h3>' + P.esc(br.label) + '</h3><p><span class="badge break">' + P.esc(br.label) + "</span></p>" +
+        '<p class="muted small">' + P.esc(br.note || "") + "</p>";
+      return;
+    }
+    var b = P.currentOrNext(fac);
+    if (!b) { box.innerHTML = '<p class="kicker">This weekend</p><h3>No more lecture weekends this semester</h3><p class="muted">January 2027 is for examinations.</p>'; return; }
+    var status = P.blockStatus(b), mode = b.modes[fac];
+    var loc = (D.locations[fac] || {})[mode];
+    box.innerHTML =
+      '<p class="kicker">' + (status === "current" ? "This weekend" : "Next lecture weekend") + "</p>" +
+      "<h3>" + P.fmtRange(b.start, b.end) + "</h3>" +
+      '<p class="row">' + P.badge(mode) + (status === "current" ? '<span class="badge now">Happening now</span>' : "") + "</p>" +
+      '<p class="small">' + P.esc(P.facultyName(fac)) + " · Fri–Sun · Times " + timesText(fac) + "</p>" +
+      '<p class="small">' + (mode === "Face-to-Face" ? "Venue: " : "Meeting link: ") + (loc ? P.esc(loc) : P.confirmTag()) + "</p>" +
+      '<div class="actions"><a class="btn" href="schedule.html#' + b.id + '">Open in schedule</a><a class="btn ghost" href="delivery.html">All delivery modes</a></div>';
+  }
+  render();
+  document.addEventListener("facultychange", render);
+})();
+</script>
+</body>
+</html>

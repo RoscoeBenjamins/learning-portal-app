@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Schedule · GCTU SGSR Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="nav.js"></script>
+  <script src="ics.js"></script>
+</head>
+<body>
+<main id="main">
+  <h1>Lecture schedule</h1>
+  <p class="muted" id="sub"></p>
+
+  <div class="toolbar">
+    <button class="btn" id="dl-all" type="button">Download full schedule (.ics)</button>
+    <p class="small muted" style="margin:0">Reminders: 2 days, 1 day and 1 hour before. Times in Africa/Accra (GMT).</p>
+  </div>
+  <p class="notice small" id="time-note" hidden>Some class times aren't confirmed yet. Those calendar entries are saved as all-day events with a 07:00 reminder on the day instead of the 1-hour reminder. Add the times in <code>data.js</code> to get timed events.</p>
+
+  <div class="stack" id="weeks"></div>
+</main>
+<script>
+(function () {
+  var P = window.Portal, D = window.PORTAL;
+  var DAY_KEYS = ["fri", "sat", "sun"], DAY_NAMES = { fri: "Friday", sat: "Saturday", sun: "Sunday" };
+
+  function cell(v) { return v ? P.esc(v) : P.confirmTag(); }
+
+  function render() {
+    var fac = P.getFaculty();
+    var times = D.lectureTimes[fac] || {};
+    var ttf = (D.timetable || {})[fac] || [];
+    var anyMissing = ttf.length ? ttf.some(function (s) { return !s.start; }) : DAY_KEYS.some(function (k) { return !(times[k] || {}).start; });
+    document.getElementById("time-note").hidden = !anyMissing;
+    document.getElementById("sub").textContent = P.facultyName(fac) + " · " + D.semester;
+
+    var prevMode = null, weekNo = 0, html = [];
+    D.blocks.forEach(function (b) {
+      var mode = b.modes[fac], st = P.blockStatus(b);
+      var cls = "week" + (st === "current" ? " is-current" : st === "past" ? " is-past" : "");
+      if (mode === "N/A") {
+        html.push('<article class="' + cls + '" id="' + b.id + '"><div class="week-head"><h2 style="margin:0">' + P.fmtRange(b.start, b.end) + "</h2>" + P.badge("N/A") + '</div><p class="muted small">No lectures for ' + P.esc(P.facultyName(fac)) + " this weekend.</p></article>");
+        return;
+      }
+      weekNo++;
+      var change = prevMode && prevMode !== mode
+        ? '<p class="change-alert">Mode changes: ' + prevMode + " last weekend → " + mode + " this weekend." + (mode === "Face-to-Face" ? " Plan your travel to campus." : " No travel needed.") + "</p>"
+        : "";
+      prevMode = mode;
+      var loc = (D.locations[fac] || {})[mode];
+      var start = P.parseDate(b.start);
+      var tt = (D.timetable || {})[fac] || [];
+      var days = tt.length ? DAY_KEYS.map(function (k, i) {
+        var slots = tt.filter(function (s) { return s.day === k; });
+        var dayLabel = "<strong>" + P.fmt(P.addDays(start, i), { weekday: true }) + "</strong>";
+        if (!slots.length) return '<li class="day">' + dayLabel + '<p class="small muted" style="margin:.25rem 0 0">No class in the timetable ' + P.confirmTag() + "</p></li>";
+        return slots.map(function (s) {
+          var topic = (((D.sessions[fac] || {})[b.id] || {})[s.code] || {}).topic;
+          var where = mode === "Face-to-Face" ? (s.venue || loc) : loc;
+          return '<li class="day">' + dayLabel + " · " + P.esc(s.code) + "<dl>" +
+            "<dt>Course</dt><dd>" + P.esc(s.title) + "</dd>" +
+            "<dt>Time</dt><dd>" + (s.start ? P.esc(s.start + "–" + s.end) : P.confirmTag(s.timeAsGiven ? "[CONFIRM] " + s.timeAsGiven.replace(/\s*\[CONFIRM[^\]]*\]/, "") : "[CONFIRM]")) + "</dd>" +
+            "<dt>Lecturer</dt><dd>" + P.esc(s.lecturer) + "</dd>" +
+            "<dt>Topic</dt><dd>" + cell(topic) + "</dd>" +
+            "<dt>" + (mode === "Face-to-Face" ? "Venue" : "Link") + "</dt><dd>" + cell(where) + "</dd>" +
+            "</dl></li>";
+        }).join("");
+      }).join("") : DAY_KEYS.map(function (k, i) {
+        var t = times[k] || {}, s = ((D.sessions[fac] || {})[b.id] || {})[k] || {};
+        return '<li class="day"><strong>' + P.fmt(P.addDays(start, i), { weekday: true }) + "</strong><dl>" +
+          "<dt>Mode</dt><dd>" + mode + "</dd>" +
+          "<dt>Time</dt><dd>" + (t.start ? P.esc(t.start + "–" + (t.end || "?")) : P.confirmTag()) + "</dd>" +
+          "<dt>Course</dt><dd>" + cell(s.course) + "</dd>" +
+          "<dt>Topic</dt><dd>" + cell(s.topic) + "</dd>" +
+          "<dt>" + (mode === "Face-to-Face" ? "Venue" : "Link") + "</dt><dd>" + cell(s.location || loc) + "</dd>" +
+          "</dl></li>";
+      }).join("");
+      html.push(
+        '<article class="' + cls + '" id="' + b.id + '">' +
+          '<div class="week-head"><div><p class="kicker" style="margin:0">Week ' + weekNo + (st === "current" ? " · This weekend" : st === "past" ? " · Done" : "") + "</p>" +
+          '<h2 style="margin:0">' + P.fmtRange(b.start, b.end) + "</h2></div>" + P.badge(mode) + "</div>" +
+          change +
+          '<ul class="days">' + days + "</ul>" +
+          '<div class="actions">' +
+            '<button class="btn js-ics" type="button" data-block="' + b.id + '">Add to calendar (.ics)</button>' +
+            '<a class="btn ghost" target="_blank" rel="noopener" href="' + ICS.googleBlockLink(b, fac) + '">Google Calendar</a>' +
+          "</div>" +
+        "</article>"
+      );
+    });
+    html.push('<article class="week"><div class="week-head"><h2 style="margin:0">21 Dec – early Jan</h2><span class="badge break">Christmas break</span></div></article>');
+    html.push('<article class="week"><div class="week-head"><h2 style="margin:0">January 2027</h2><span class="badge break">Examinations</span></div><p class="muted small">Exam timetable ' + P.confirmTag() + "</p></article>");
+    document.getElementById("weeks").innerHTML = html.join("");
+  }
+
+  document.getElementById("weeks").addEventListener("click", function (e) {
+    var btn = e.target.closest(".js-ics"); if (!btn) return;
+    var b = D.blocks.filter(function (x) { return x.id === btn.dataset.block; })[0];
+    ICS.download("gctu-lectures-" + b.start + ".ics", ICS.blockIcs(b, P.getFaculty()));
+  });
+  document.getElementById("dl-all").addEventListener("click", function () {
+    var fac = P.getFaculty();
+    ICS.download("gctu-" + fac + "-schedule-2026-27.ics", ICS.fullIcs(fac));
+  });
+
+  render();
+  document.addEventListener("facultychange", render);
+  if (location.hash) { var el = document.querySelector(location.hash); if (el) el.scrollIntoView(); }
+})();
+</script>
+</body>
+</html>

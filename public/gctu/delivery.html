@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Delivery mode · GCTU SGSR Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="data.js"></script>
+  <script src="nav.js"></script>
+</head>
+<body>
+<main id="main">
+  <h1>Mode of delivery</h1>
+  <p class="muted">SGSR 2026/2027 (September 2026 – January 2027). Lectures run Friday–Sunday.</p>
+
+  <div class="toolbar">
+    <div class="legend" aria-label="Legend">
+      <span class="badge virtual">Virtual</span><span class="badge f2f">Face-to-Face</span><span class="badge na">N/A</span>
+    </div>
+    <div class="faculty-picker">
+      <label for="view">Show</label>
+      <select id="view">
+        <option value="mine">My faculty only</option>
+        <option value="all">All faculties</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap" id="table"></div>
+
+  <h2>Notes</h2>
+  <ul id="notes"></ul>
+  <p id="pdf"></p>
+</main>
+<script>
+(function () {
+  var P = window.Portal, D = window.PORTAL;
+  var view = "mine";
+  try { view = localStorage.getItem("gctu.deliveryView") || "mine"; } catch (e) {}
+  var sel = document.getElementById("view");
+  sel.value = view;
+  sel.addEventListener("change", function () { view = sel.value; try { localStorage.setItem("gctu.deliveryView", view); } catch (e) {} render(); });
+
+  function render() {
+    var fac = P.getFaculty();
+    var cols = view === "all" ? D.faculties : D.faculties.filter(function (f) { return f.id === fac; });
+    var head = "<tr><th scope=\"col\">Dates (2026)</th>" + cols.map(function (f) { return '<th scope="col">' + P.esc(f.name) + "</th>"; }).join("") + "</tr>";
+    var rows = D.blocks.map(function (b) {
+      var st = P.blockStatus(b);
+      var cls = st === "current" ? "is-current" : st === "past" ? "is-past" : "";
+      return '<tr class="' + cls + '"><td class="cell-title" data-label="Dates">' + P.fmtRange(b.start, b.end) +
+        (st === "current" ? ' <span class="badge now">This weekend</span>' : "") + "</td>" +
+        cols.map(function (f) { return '<td data-label="' + P.esc(f.name) + '"><span>' + P.badge(b.modes[f.id]) + "</span></td>"; }).join("") + "</tr>";
+    }).join("");
+    var span = cols.length + 1;
+    rows += '<tr class="is-break"><td class="cell-title" data-label="Dates">21 Dec – early Jan</td><td colspan="' + (span - 1) + '" data-label="All"><span class="badge break">Christmas break</span></td></tr>';
+    rows += '<tr class="is-break"><td class="cell-title" data-label="Dates">January 2027</td><td colspan="' + (span - 1) + '" data-label="All"><span class="badge break">Examinations</span></td></tr>';
+    document.getElementById("table").innerHTML =
+      '<table class="data"><caption class="sr-only">Delivery mode by weekend' + (view === "all" ? " for all faculties" : " for " + P.esc(P.facultyName(fac))) + "</caption><thead>" + head + "</thead><tbody>" + rows + "</tbody></table>";
+  }
+
+  document.getElementById("notes").innerHTML = D.notes.map(function (n) { return "<li>" + P.esc(n) + "</li>"; }).join("");
+  document.getElementById("pdf").innerHTML = D.deliveryPdfUrl
+    ? '<a class="btn ghost" href="' + P.esc(D.deliveryPdfUrl) + '" target="_blank" rel="noopener">Open the original PDF</a>'
+    : 'Original PDF: ' + P.confirmTag("[CONFIRM] add link in data.js");
+
+  render();
+  document.addEventListener("facultychange", render);
+})();
+</script>
+</body>
+</html>

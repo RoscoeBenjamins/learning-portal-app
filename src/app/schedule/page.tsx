@@ -1,15 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import { q, useData } from "@/lib/useData";
 import { getCourses } from "@/lib/courses";
 import { track } from "@/lib/track";
-import type { AcademicBreak, Assignment, Course, DeliveryMode, LectureBlock } from "@/lib/types";
+import type { AcademicBreak, Assignment, Course, DeliveryMode, LectureBlock, WeeklyLink } from "@/lib/types";
 import { courseColor } from "@/lib/courseColors";
 import { ErrorBox, Loading, PageHeader, Pill } from "@/components/ui";
 import {
   addDays, buildIcs, classEvents, currentOrNext, dayName, downloadIcs, fmtDate, fmtTime,
-  googleLink, previousLecture, todayAccra, type ClassEvent,
+  campus, googleLink, previousLecture, setCampus, todayAccra, type ClassEvent,
 } from "@/lib/calendar";
 
 const FACULTIES: { id: string; name: string }[] = [
@@ -26,22 +26,27 @@ function ModePill({ mode }: { mode: DeliveryMode }) {
 const range = (b: LectureBlock) => `${fmtDate(b.start_date, { day: "numeric", month: "short" })} – ${fmtDate(b.end_date, { day: "numeric", month: "short", year: "numeric" })}`;
 
 export default function SchedulePage() {
-  const { data, error, loading } = useData(async () => {
-    const [courses, blocks, breaks, assignments] = await Promise.all([
+  const { data, error, loading, reload } = useData(async () => {
+    const [courses, blocks, breaks, assignments, links, settings] = await Promise.all([
       getCourses(),
       q<LectureBlock[]>(supabase().from("lecture_blocks").select("*").order("start_date")),
       q<AcademicBreak[]>(supabase().from("academic_breaks").select("*").order("start_date")),
       q<Assignment[]>(supabase().from("assignments").select("id,course_code,title,due_date")),
+      q<WeeklyLink[]>(supabase().from("weekly_links").select("*")).catch(() => [] as WeeklyLink[]),
+      q<{ key: string; value: string }[]>(supabase().from("app_settings").select("key,value")).catch(() => []),
     ]);
-    return { courses, blocks, breaks, assignments };
+    setCampus(settings.find((s) => s.key === "campus_venue")?.value);
+    return { courses, blocks, breaks, assignments, links };
   });
   const [showAll, setShowAll] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => { supabase().rpc("is_admin").then(({ data }) => setAdmin(!!data), () => {}); }, []);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? "No data"} />;
 
-  const { courses, blocks, breaks, assignments } = data;
+  const { courses, blocks, breaks, assignments, links } = data;
   const scheduled = courses.filter((c) => c.class_day);
-  const events = classEvents(blocks, scheduled);
+  const events = classEvents(blocks, scheduled, links);
   const today = todayAccra();
   const cur = currentOrNext(blocks, today);
   const inBreak = breaks.find((b) => b.start_date <= today && (!b.end_date || b.end_date >= today));
@@ -75,7 +80,7 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {cur ? <ThisWeekend block={cur} prev={previousLecture(blocks, cur)} events={events.filter((e) => e.block.id === cur.id)} today={today} onDownload={() => dlBlock(cur)} />
+      {cur ? <ThisWeekend block={cur} prev={previousLecture(blocks, cur)} events={events.filter((e) => e.block.id === cur.id)} today={today} onDownload={() => dlBlock(cur)} admin={admin} onSaved={reload} />
         : !inBreak && <div className="card mb-6"><p className="font-medium">No more lecture weekends this semester.</p></div>}
 
       {due.length > 0 && (
@@ -106,7 +111,7 @@ export default function SchedulePage() {
             );
           })}
         </div>
-        <p className="muted mt-2 text-[13px]">No Friday classes in the current timetable. Venues and meeting links will be added when confirmed.</p>
+        <p className="muted mt-2 text-[13px]">Face-to-face classes: {campus()}. Virtual classes: Zoom, with a new link each week (shown under This weekend). No Friday classes in the current timetable.</p>
       </section>
 
       <section className="mb-8">
@@ -171,13 +176,13 @@ function ClassRow({ c }: { c: Course }) {
       <div className="min-w-0">
         <div className="text-[15px] font-semibold">{fmtTime(c.start_time)}–{fmtTime(c.end_time)} · {c.code}</div>
         <div className="text-[15px]">{c.title}</div>
-        <div className="muted text-[13px]">{[c.lecturer, c.venue && `Venue ${c.venue}`].filter(Boolean).join(" · ")}</div>
+        <div className="muted text-[13px]">{[c.lecturer, c.venue && `Room ${c.venue} (in person)`].filter(Boolean).join(" · ")}</div>
       </div>
     </li>
   );
 }
 
-function ThisWeekend({ block, prev, events, today, onDownload }: { block: LectureBlock; prev: LectureBlock | null; events: ClassEvent[]; today: string; onDownload: () => void }) {
+function ThisWeekend({ block, prev, events, today, onDownload, admin, onSaved }: { block: LectureBlock; prev: LectureBlock | null; events: ClassEvent[]; today: string; onDownload: () => void; admin: boolean; onSaved: () => void }) {
   const live = block.start_date <= today;
   const changed = prev && block.mode !== "N/A" && prev.mode !== block.mode;
   const days = Math.round((Date.parse(block.start_date) - Date.parse(today)) / 864e5);
@@ -195,6 +200,8 @@ function ThisWeekend({ block, prev, events, today, onDownload }: { block: Lectur
           Heads up: mode changes from {prev!.mode} last weekend to <b>{block.mode}</b>.
         </p>
       )}
+      {block.mode === "Face-to-Face" && <p className="mt-3 text-[15px]"><span className="font-semibold">Venue:</span> {campus()}</p>}
+      {block.mode === "Virtual" && <p className="muted mt-3 text-[14px]">Zoom links are generated each week and appear next to each class once posted.</p>}
       {block.mode === "N/A" ? <p className="muted mt-3 text-[15px]">No FoCIS Masters lectures this weekend.</p> : (
         <ul className="mt-4 divide-y divide-[var(--line)]">
           {events.map((e) => (
@@ -202,9 +209,15 @@ function ThisWeekend({ block, prev, events, today, onDownload }: { block: Lectur
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold" style={{ color: courseColor(e.course.code) }}>{fmtDate(e.date, { weekday: "long" })} · {fmtTime(e.course.start_time)}–{fmtTime(e.course.end_time)}</div>
                 <div className="text-[15px] font-medium">{e.course.code} · {e.course.title}</div>
-                <div className="muted text-[13px]">{e.course.lecturer}{e.course.venue && block.mode === "Face-to-Face" ? ` · Venue ${e.course.venue}` : ""}</div>
+                <div className="muted text-[13px]">{e.course.lecturer}{e.course.venue && block.mode === "Face-to-Face" ? ` · Room ${e.course.venue}` : ""}</div>
               </div>
-              <a href={googleLink(e)} target="_blank" rel="noopener noreferrer" className="btn-ghost px-4 text-[14px]">Google Calendar</a>
+              <div className="flex flex-wrap gap-2">
+                {block.mode === "Virtual" && (e.link
+                  ? <a href={e.link} target="_blank" rel="noopener noreferrer" className="btn px-4 text-[14px]">Join Zoom</a>
+                  : <span className="muted content-center text-[13px]">Zoom link not posted yet</span>)}
+                <a href={googleLink(e)} target="_blank" rel="noopener noreferrer" className="btn-ghost px-4 text-[14px]">Google Calendar</a>
+              </div>
+              {admin && block.mode === "Virtual" && <LinkEditor e={e} onSaved={onSaved} />}
             </li>
           ))}
         </ul>
@@ -226,5 +239,28 @@ function BlockRow({ b, current, past, onDownload }: { b: LectureBlock; current?:
         {!past && b.mode !== "N/A" && onDownload && <button className="btn-ghost px-4 text-[14px]" onClick={onDownload} aria-label={`Add weekend ${range(b)} to calendar`}>.ics</button>}
       </div>
     </li>
+  );
+}
+
+/** Admin-only: paste this week's Zoom link for a class. */
+function LinkEditor({ e, onSaved }: { e: ClassEvent; onSaved: () => void }) {
+  const [url, setUrl] = useState(e.link ?? "");
+  const [msg, setMsg] = useState("");
+  const save = async () => {
+    const v = url.trim();
+    const db = supabase().from("weekly_links");
+    const { error } = v
+      ? await db.upsert({ block_id: e.block.id, course_code: e.course.code, url: v, updated_at: new Date().toISOString() })
+      : await db.delete().eq("block_id", e.block.id).eq("course_code", e.course.code);
+    if (error) return setMsg(/check/i.test(error.message) ? "Link must start with https://" : error.message);
+    setMsg("Saved"); track("zoom_link_saved", e.block.id, { course: e.course.code }); onSaved();
+  };
+  return (
+    <form className="flex w-full flex-wrap gap-2" onSubmit={(ev) => { ev.preventDefault(); save(); }}>
+      <label className="sr-only" htmlFor={`z-${e.uid}`}>Zoom link for {e.course.code}</label>
+      <input id={`z-${e.uid}`} className="input min-w-0 flex-1" type="url" inputMode="url" placeholder="Paste Zoom link (admin)" value={url} onChange={(ev) => { setUrl(ev.target.value); setMsg(""); }} />
+      <button className="btn-ghost px-4 text-[14px]" type="submit">Save</button>
+      {msg && <span role="status" className="muted w-full text-[13px]">{msg}</span>}
+    </form>
   );
 }

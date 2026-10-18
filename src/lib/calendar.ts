@@ -1,5 +1,10 @@
 // Calendar export (RFC 5545 .ics + Google Calendar links). All times are Africa/Accra (UTC+0, no DST).
-import type { AcademicBreak, Assignment, Course, LectureBlock } from "./types";
+import type { AcademicBreak, Assignment, Course, LectureBlock, WeeklyLink } from "./types";
+
+/** Where face-to-face classes happen (app_settings.campus_venue overrides this). */
+let CAMPUS = "Graduate Block, GCTU Tesano campus";
+export function setCampus(v?: string | null) { if (v) CAMPUS = v; }
+export const campus = () => CAMPUS;
 
 export const DAY_OFFSET: Record<string, number> = { fri: 0, sat: 1, sun: 2 };
 const DAY_NAME: Record<string, string> = { fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -24,17 +29,18 @@ export function fmtDate(iso: string, opts: Intl.DateTimeFormatOptions = { weekda
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { ...opts, timeZone: "UTC" });
 }
 
-export type ClassEvent = { uid: string; date: string; course: Course; block: LectureBlock };
+export type ClassEvent = { uid: string; date: string; course: Course; block: LectureBlock; link: string | null };
 
 /** One event per scheduled class per lecture weekend (skips N/A weekends). */
-export function classEvents(blocks: LectureBlock[], courses: Course[]): ClassEvent[] {
+export function classEvents(blocks: LectureBlock[], courses: Course[], links: WeeklyLink[] = []): ClassEvent[] {
   const out: ClassEvent[] = [];
   for (const b of blocks) {
     if (b.mode === "N/A") continue;
     for (const c of courses) {
       if (!c.class_day || DAY_OFFSET[c.class_day] === undefined) continue;
       const date = addDays(b.start_date, DAY_OFFSET[c.class_day]);
-      out.push({ uid: `${b.id}-${c.code.replace(/\s+/g, "").toLowerCase()}@learning-portal`, date, course: c, block: b });
+      const link = b.mode === "Virtual" ? links.find((l) => l.block_id === b.id && l.course_code === c.code)?.url ?? null : null;
+      out.push({ uid: `${b.id}-${c.code.replace(/\s+/g, "").toLowerCase()}@learning-portal`, date, course: c, block: b, link });
     }
   }
   return out.sort((a, b) => (a.date + (a.course.start_time ?? "")).localeCompare(b.date + (b.course.start_time ?? "")));
@@ -61,9 +67,9 @@ const alarm = (trigger: string, text: string) => ["BEGIN:VALARM", "ACTION:DISPLA
 
 const VTZ = ["BEGIN:VTIMEZONE", "TZID:Africa/Accra", "BEGIN:STANDARD", "DTSTART:19700101T000000", "TZOFFSETFROM:+0000", "TZOFFSETTO:+0000", "TZNAME:GMT", "END:STANDARD", "END:VTIMEZONE"];
 
-function where(e: ClassEvent) {
-  if (e.block.mode === "Virtual") return "Virtual (link from lecturer)";
-  return e.course.venue ? `GCTU, ${e.course.venue}` : "GCTU campus (venue to be confirmed)";
+export function where(e: ClassEvent) {
+  if (e.block.mode === "Virtual") return e.link ?? "Zoom (link is posted each week)";
+  return `${CAMPUS}${e.course.venue ? ` (room ${e.course.venue})` : ""}`;
 }
 
 function classVevent(e: ClassEvent) {
@@ -77,7 +83,8 @@ function classVevent(e: ClassEvent) {
   lines.push(
     `SUMMARY:${esc(`${c.code} ${c.title} (${e.block.mode})`)}`,
     `LOCATION:${esc(where(e))}`,
-    `DESCRIPTION:${esc(`Lecturer: ${c.lecturer ?? "TBC"}\nMode: ${e.block.mode}`)}`,
+    `DESCRIPTION:${esc(`Lecturer: ${c.lecturer ?? "TBC"}\nMode: ${e.block.mode}${e.block.mode === "Virtual" ? `\nZoom: ${e.link ?? "link is posted each week on the portal Schedule page"}` : ""}`)}`,
+    ...(e.link ? [`URL:${e.link}`] : []),
     ...alarm("-P2D", `${c.code} in 2 days`), ...alarm("-P1D", `${c.code} tomorrow`), ...alarm("-PT1H", `${c.code} in 1 hour`),
     "END:VEVENT",
   );
@@ -126,7 +133,7 @@ export function googleLink(e: ClassEvent) {
     : `${e.date.replace(/-/g, "")}/${addDays(e.date, 1).replace(/-/g, "")}`;
   const p = new URLSearchParams({
     action: "TEMPLATE", text: `${c.code} ${c.title} (${e.block.mode})`, dates, ctz: "Africa/Accra",
-    location: where(e), details: `Lecturer: ${c.lecturer ?? "TBC"}`,
+    location: where(e), details: `Lecturer: ${c.lecturer ?? "TBC"}${e.block.mode === "Virtual" ? `\nZoom: ${e.link ?? "posted each week on the portal Schedule page"}` : ""}`,
   });
   return `https://calendar.google.com/calendar/render?${p}`;
 }

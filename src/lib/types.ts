@@ -5,6 +5,7 @@ export type Course = {
 };
 export type DeliveryMode = "Virtual" | "Face-to-Face" | "N/A";
 export type LectureBlock = { id: string; start_date: string; end_date: string; mode: DeliveryMode; modes: Record<string, DeliveryMode>; updated_at: string };
+export type WeeklyLink = { block_id: string; course_code: string; url: string; updated_at?: string };
 export type AcademicBreak = { label: string; start_date: string; end_date: string | null; note: string | null };
 export type Topic = {
   id: string; course_code: string; position: number; title: string; summary: string | null;

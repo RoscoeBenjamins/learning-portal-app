@@ -12,6 +12,7 @@ const I = (d: string) => (
 );
 const NAV = [
   { href: "/", label: "Courses", icon: I("M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z") },
+  { href: "/schedule", label: "Schedule", icon: I("M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 12h2M14 12h2M8 16h2") },
   { href: "/tests", label: "Tests", icon: I("M9 11l2 2 4-4M5 4h14v16H5z") },
   { href: "/performance", label: "Progress", icon: I("M5 20V11M12 20V5M19 20v-6") },
   { href: "/dissertation", label: "Thesis", icon: I("M12 3l9 5-9 5-9-5 9-5zM6 10.5V16c2 2 10 2 12 0v-5.5") },

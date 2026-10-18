@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: "/gctu", destination: "/schedule", permanent: false },
+      { source: "/gctu/:path*", destination: "/schedule", permanent: false },
+    ];
+  },
   async headers() {
     return [{
       source: "/(.*)",

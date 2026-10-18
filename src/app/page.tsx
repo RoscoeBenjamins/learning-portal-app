@@ -6,16 +6,19 @@ import { getCourses } from "@/lib/courses";
 import { slugCode, type Attempt } from "@/lib/types";
 import { courseColor } from "@/lib/courseColors";
 import { ErrorBox, Loading, PageHeader } from "@/components/ui";
+import type { LectureBlock } from "@/lib/types";
+import { currentOrNext, fmtDate, todayAccra } from "@/lib/calendar";
 
 export default function Home() {
   const { data, error, loading } = useData(async () => {
-    const [courses, topics, attempts, assignments] = await Promise.all([
+    const [courses, topics, attempts, assignments, blocks] = await Promise.all([
       getCourses(),
       q<{ id: string; course_code: string }[]>(supabase().from("topics").select("id,course_code")),
       q<Attempt[]>(supabase().from("attempts").select("course_code,topic_id,score,total,mode")),
       q<{ course_code: string }[]>(supabase().from("assignments").select("course_code")),
+      q<LectureBlock[]>(supabase().from("lecture_blocks").select("*").order("start_date")).catch(() => [] as LectureBlock[]),
     ]);
-    return { courses, topics, attempts, assignments };
+    return { courses, topics, attempts, assignments, next: currentOrNext(blocks) };
   });
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? "No data"} />;
@@ -25,6 +28,15 @@ export default function Home() {
     <div>
       <div className="eyebrow">{today}</div>
       <PageHeader title="Your courses" subtitle="MSc-MPhil IT · Semester 2" />
+      {data.next && (
+        <Link href="/schedule" className="card-link mb-6 flex flex-wrap items-center justify-between gap-2 py-4">
+          <span>
+            <span className="eyebrow block">{data.next.start_date <= todayAccra() ? "This weekend" : "Next lecture weekend"}</span>
+            <span className="text-[17px] font-semibold">{fmtDate(data.next.start_date, { day: "numeric", month: "short" })} – {fmtDate(data.next.end_date, { day: "numeric", month: "short" })}</span>
+          </span>
+          <span className={`pill ${data.next.mode === "Face-to-Face" ? "tone-warn" : data.next.mode === "Virtual" ? "tone-ok" : "tone-none"}`}>{data.next.mode === "Face-to-Face" ? "▲ Face-to-Face" : data.next.mode === "Virtual" ? "◎ Virtual" : "– No lectures"} ›</span>
+        </Link>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.courses.map((c) => {
           const topics = data.topics.filter((t) => t.course_code === c.code);

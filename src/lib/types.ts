@@ -1,7 +1,11 @@
 export type Course = {
   code: string; title: string; lecturer: string | null; schedule: string | null;
   venue: string | null; is_project: boolean; sort_order: number; updated_at: string;
+  class_day: "fri" | "sat" | "sun" | null; start_time: string | null; end_time: string | null;
 };
+export type DeliveryMode = "Virtual" | "Face-to-Face" | "N/A";
+export type LectureBlock = { id: string; start_date: string; end_date: string; mode: DeliveryMode; modes: Record<string, DeliveryMode>; updated_at: string };
+export type AcademicBreak = { label: string; start_date: string; end_date: string | null; note: string | null };
 export type Topic = {
   id: string; course_code: string; position: number; title: string; summary: string | null;
   content_md: string; audio_script: string; key_terms: { term: string; meaning: string }[];

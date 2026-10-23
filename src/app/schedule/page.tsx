@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase-browser";
 import { q, useData } from "@/lib/useData";
 import { getCourses } from "@/lib/courses";
 import { track } from "@/lib/track";
-import type { AcademicBreak, Assignment, Course, DeliveryMode, LectureBlock, WeeklyLink } from "@/lib/types";
+import type { AcademicBreak, Assignment, ClassOverride, Course, DeliveryMode, LectureBlock, WeeklyLink } from "@/lib/types";
 import { courseColor } from "@/lib/courseColors";
 import { ErrorBox, Loading, PageHeader, Pill } from "@/components/ui";
 import {
@@ -27,16 +27,17 @@ const range = (b: LectureBlock) => `${fmtDate(b.start_date, { day: "numeric", mo
 
 export default function SchedulePage() {
   const { data, error, loading, reload } = useData(async () => {
-    const [courses, blocks, breaks, assignments, links, settings] = await Promise.all([
+    const [courses, blocks, breaks, assignments, links, settings, overrides] = await Promise.all([
       getCourses(),
       q<LectureBlock[]>(supabase().from("lecture_blocks").select("*").order("start_date")),
       q<AcademicBreak[]>(supabase().from("academic_breaks").select("*").order("start_date")),
       q<Assignment[]>(supabase().from("assignments").select("id,course_code,title,due_date")),
       q<WeeklyLink[]>(supabase().from("weekly_links").select("*")).catch(() => [] as WeeklyLink[]),
       q<{ key: string; value: string }[]>(supabase().from("app_settings").select("key,value")).catch(() => []),
+      q<ClassOverride[]>(supabase().from("class_overrides").select("*")).catch(() => [] as ClassOverride[]),
     ]);
     setCampus(settings.find((s) => s.key === "campus_venue")?.value);
-    return { courses, blocks, breaks, assignments, links };
+    return { courses, blocks, breaks, assignments, links, overrides };
   });
   const [showAll, setShowAll] = useState(false);
   const [admin, setAdmin] = useState(false);
@@ -44,9 +45,9 @@ export default function SchedulePage() {
   if (loading) return <Loading />;
   if (error || !data) return <ErrorBox message={error ?? "No data"} />;
 
-  const { courses, blocks, breaks, assignments, links } = data;
+  const { courses, blocks, breaks, assignments, links, overrides } = data;
   const scheduled = courses.filter((c) => c.class_day);
-  const events = classEvents(blocks, scheduled, links);
+  const events = classEvents(blocks, scheduled, links, overrides);
   const today = todayAccra();
   const cur = currentOrNext(blocks, today);
   const inBreak = breaks.find((b) => b.start_date <= today && (!b.end_date || b.end_date >= today));
@@ -200,24 +201,26 @@ function ThisWeekend({ block, prev, events, today, onDownload, admin, onSaved }:
           Heads up: mode changes from {prev!.mode} last weekend to <b>{block.mode}</b>.
         </p>
       )}
-      {block.mode === "Face-to-Face" && <p className="mt-3 text-[15px]"><span className="font-semibold">Venue:</span> {campus()}</p>}
+      {block.mode === "Face-to-Face" && <p className="mt-3 text-[15px]"><span className="font-semibold">Venue:</span> {campus()}{events.some((e) => e.mode === "Virtual") ? " (classes marked Online are on Zoom)" : ""}</p>}
+      {events.some((e) => e.changed) && <p role="status" className="mt-3 rounded-xl bg-[#FF9500]/15 px-3.5 py-2.5 text-[14px] text-[#9A5700] dark:text-[#FF9F0A]">Timetable changes this weekend: {events.filter((e) => e.changed).map((e) => e.course.code).join(", ")}. Times below are updated.</p>}
       {block.mode === "Virtual" && <p className="muted mt-3 text-[14px]">Zoom links are generated each week and appear next to each class once posted.</p>}
       {block.mode === "N/A" ? <p className="muted mt-3 text-[15px]">No FoCIS Masters lectures this weekend.</p> : (
         <ul className="mt-4 divide-y divide-[var(--line)]">
           {events.map((e) => (
             <li key={e.uid} className={`flex flex-wrap items-center justify-between gap-2 py-3 ${e.date < today ? "opacity-60" : ""}`}>
               <div className="min-w-0">
-                <div className="text-[13px] font-semibold" style={{ color: courseColor(e.course.code) }}>{fmtDate(e.date, { weekday: "long" })} · {fmtTime(e.course.start_time)}–{fmtTime(e.course.end_time)}</div>
+                <div className="text-[13px] font-semibold" style={{ color: courseColor(e.course.code) }}>{fmtDate(e.date, { weekday: "long" })} · {fmtTime(e.start)}–{fmtTime(e.end)}{e.mode !== block.mode && <> · <span className="font-semibold">{e.mode === "Virtual" ? "Online (Zoom)" : e.mode}</span></>}</div>
                 <div className="text-[15px] font-medium">{e.course.code} · {e.course.title}</div>
-                <div className="muted text-[13px]">{e.course.lecturer}{e.course.venue && block.mode === "Face-to-Face" ? ` · Room ${e.course.venue}` : ""}</div>
+                <div className="muted text-[13px]">{e.course.lecturer}{e.course.venue && e.mode === "Face-to-Face" ? ` · Room ${e.course.venue}` : ""}</div>
+                {e.changed && <div className="mt-1"><span className="pill tone-warn">Changed this week</span> <span className="muted text-[13px]">Usually {e.usual}</span></div>}
               </div>
               <div className="flex flex-wrap gap-2">
-                {block.mode === "Virtual" && (e.link
+                {e.mode === "Virtual" && (e.link
                   ? <a href={e.link} target="_blank" rel="noopener noreferrer" className="btn px-4 text-[14px]">Join Zoom</a>
                   : <span className="muted content-center text-[13px]">Zoom link not posted yet</span>)}
                 <a href={googleLink(e)} target="_blank" rel="noopener noreferrer" className="btn-ghost px-4 text-[14px]">Google Calendar</a>
               </div>
-              {admin && block.mode === "Virtual" && <LinkEditor e={e} onSaved={onSaved} />}
+              {admin && e.mode === "Virtual" && <LinkEditor e={e} onSaved={onSaved} />}
             </li>
           ))}
         </ul>

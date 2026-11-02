@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCourseBySlug, getTopics } from "@/lib/courses";
 import { useData } from "@/lib/useData";
 import { CourseNav } from "@/components/CourseNav";
+import { CourseSearch } from "@/components/CourseSearch";
 import { Empty, ErrorBox, Loading, NOT_YET, PageHeader } from "@/components/ui";
 
 export default function CoursePage({ params }: { params: { slug: string } }) {
@@ -18,6 +19,7 @@ export default function CoursePage({ params }: { params: { slug: string } }) {
       <PageHeader back={{ href: "/", label: "All courses" }} title={`${course.code}: ${course.title}`}
         subtitle={<>{course.lecturer}{course.schedule ? ` · ${course.schedule}` : ""}{course.venue ? ` · Venue ${course.venue}` : ""}</>} />
       <CourseNav slug={params.slug} />
+      <CourseSearch course={course.code} placeholder={`Search ${course.code} topics, terms, flashcards…`} />
       {!topics.length ? <Empty title="No topics yet">{NOT_YET}</Empty> : (
         <ol className="space-y-3">
           {topics.map((t) => (

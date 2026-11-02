@@ -6,6 +6,7 @@ import { getCourses } from "@/lib/courses";
 import { slugCode, type Attempt } from "@/lib/types";
 import { courseColor } from "@/lib/courseColors";
 import { ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { CourseSearch } from "@/components/CourseSearch";
 import type { LectureBlock } from "@/lib/types";
 import { currentOrNext, fmtDate, todayAccra } from "@/lib/calendar";
 
@@ -28,6 +29,7 @@ export default function Home() {
     <div>
       <div className="eyebrow">{today}</div>
       <PageHeader title="Your courses" subtitle="MSc-MPhil IT · Semester 2" />
+      <CourseSearch />
       {data.next && (
         <Link href="/schedule" className="card-link mb-6 flex flex-wrap items-center justify-between gap-2 py-4">
           <span>

@@ -4,6 +4,7 @@ import { getCourseBySlug, getTopics } from "@/lib/courses";
 import { q, useData } from "@/lib/useData";
 import type { Assignment, DraftFeedback } from "@/lib/types";
 import { CourseNav } from "@/components/CourseNav";
+import { CourseSearch } from "@/components/CourseSearch";
 import { AssignmentCard } from "@/components/AssignmentCard";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 
@@ -27,6 +28,7 @@ export default function Assignments({ params }: { params: { slug: string } }) {
     <div>
       <PageHeader back={{ href: `/courses/${params.slug}`, label: course.code }} title="Assignments" />
       <CourseNav slug={params.slug} />
+      <CourseSearch course={course.code} placeholder={`Search ${course.code}…`} />
 
       <p className="muted mb-6 max-w-2xl text-[15px] leading-relaxed">Guides to help you write your own answer. Follow your lecturer's rules on AI use — handing in generated text as your own can count as academic misconduct.</p>
 

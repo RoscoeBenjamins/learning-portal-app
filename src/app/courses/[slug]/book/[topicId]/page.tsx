@@ -6,6 +6,7 @@ import { q, useData } from "@/lib/useData";
 import type { Flashcard, Question } from "@/lib/types";
 import { courseColor } from "@/lib/courseColors";
 import { CourseNav } from "@/components/CourseNav";
+import { CourseSearch } from "@/components/CourseSearch";
 import { Markdown, slugify } from "@/components/Markdown";
 import { Flashcards } from "@/components/Flashcards";
 import { Quiz } from "@/components/Quiz";
@@ -44,6 +45,7 @@ export default function TopicPage({ params }: { params: { slug: string; topicId:
     <div>
       <Link href={`/courses/${params.slug}/book`} className="inline-flex min-h-[44px] items-center gap-1 text-[15px] text-brand-600 dark:text-[#2997FF]"><span aria-hidden>‹</span> {course.code} course book</Link>
       <CourseNav slug={params.slug} />
+      <CourseSearch course={course.code} placeholder={`Search ${course.code}…`} />
 
       <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-12">
         <aside className="hidden lg:block">

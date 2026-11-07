@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCourseBySlug, getTopics } from "@/lib/courses";
 import { useData } from "@/lib/useData";
 import { CourseNav } from "@/components/CourseNav";
+import { CourseSearch } from "@/components/CourseSearch";
 import { Empty, ErrorBox, Loading, NOT_YET, PageHeader } from "@/components/ui";
 
 export default function Book({ params }: { params: { slug: string } }) {
@@ -19,6 +20,7 @@ export default function Book({ params }: { params: { slug: string } }) {
       <PageHeader back={{ href: `/courses/${params.slug}`, label: course.code }} title={`${course.title}: Course book`}
         subtitle={last ? `Last updated ${new Date(last).toLocaleDateString("en-GB")}. Grows as new lecture materials are added.` : undefined} />
       <CourseNav slug={params.slug} />
+      <CourseSearch course={course.code} placeholder={`Search the ${course.code} course book…`} />
       {!topics.length ? <Empty title="The course book is empty for now">{NOT_YET}</Empty> : (
         <div className="card">
           <h2 className="font-semibold">Contents</h2>

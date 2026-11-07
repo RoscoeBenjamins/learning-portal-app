@@ -104,7 +104,24 @@ export default function TopicPage({ params }: { params: { slug: string; topicId:
             </Step>
           )}
 
-          {topic.source_files.length > 0 && <p className="muted mt-10 text-[13px]">Based on: {topic.source_files.map((f) => f.name).join(", ")}</p>}
+          {topic.source_files.length > 0 && (
+            <section aria-labelledby="sources-h" className="card mt-10">
+              <h2 id="sources-h" className="text-[17px] font-semibold">Lecture sources</h2>
+              <p className="muted mt-1 text-[13px]">
+                {/## references/i.test(topic.content_md)
+                  ? "The numbers in brackets in the text, e.g. [1, slide 12], point to the References list above. Open the original files here:"
+                  : "Inline references for this topic are being added by the next portal update. Original files:"}
+              </p>
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[14px]">
+                {topic.source_files.map((f) => (
+                  <li key={f.id}>
+                    <a href={`https://drive.google.com/file/d/${encodeURIComponent(f.id)}/view`} target="_blank" rel="noopener noreferrer"
+                      className="text-brand-600 underline-offset-2 hover:underline dark:text-[#2997FF]">{f.name}</a>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2">
             {prev ? <Link className="card-link" href={link(prev.id)}><div className="muted text-[13px]">‹ Previous</div><div className="mt-1 font-semibold leading-snug">{prev.title}</div></Link> : <span />}
